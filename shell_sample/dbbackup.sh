@@ -17,3 +17,57 @@ shell_log_base_path=/shell_log
 LOG_FULL_DIR=${shell_log_base_path}/${now_date}
 #出力シェルログ名
 LOG_NAME=${LOG_FULL_DIR}/dbbackup_${now_date}.log
+
+#####
+# ログファイル作成
+#####
+mkdir ${LOG_FULL_DIR}
+touch ${LOG_NAME}
+#シェルログディレクトリ配下のディレクトリを一括で権限775にし、ファイルを一括で権限644にする
+find ${shell_log_base_path} -type d | xargs chmod 775
+find ${LOG_FULL_DIR} -type f | xargs chmod 775
+#以下{}内の処理について標準出力と標準エラー出力をログファイルに出力する。
+{
+echo "=="
+echo "== DBバックアップ"
+echo "=="
+
+#####
+# シェル実行前確認
+#####
+echo "== シェル実行前確認"
+echo "DBバックアップディレクトリの確認"
+echo "ls -l ${dbbackup_path}"
+ls -l ${dbbackup_path}
+echo "アーカイブログディレクトリの確認"
+echo "ls -l ${archive_log_path}"
+ls -l ${archive_log_path}
+echo "シェルログディレクトリの確認"
+echo "ls -l ${shell_log_base_path}"
+ls -l ${shell_log_base_path}
+
+#####
+# opensslでDBパスワードを復号
+#####
+echo "== openssl　パスワード復号処理"
+# パスワード復号コマンド「openssl enc -d <CipherType> -kfile <鍵ファイル> -in <暗号化済みパスワードファイル>」
+db_pass=`openssl enc -d -aes-256-cbc -kfile /★★/db_secret -in /★★/encripted_db_password`
+EXIT_CODE=${?}
+if [ ${EXIT_CODE} -ne 0 ]; then
+  echo "exit_code:${EXIT_CODE} DBパスワード復号処理エラー"
+  exit ${EXIT_CODE}
+fi
+
+#####
+# 空のDBバックアップディレクトリを削除する
+#####
+echo "== 空のDBバックアップディレクトリ削除処理"
+#DBバックアップディレクトリを取得する
+# ls -lt <パス>       ：<パス>配下のディレクトリとファイルを時刻によってソートしてリストする。
+# grep '.[0-9]\{14\}' ：YYYYMMDDHHMMSS形式(数字14桁)のディレクトリを検索する
+# awk '{print $9}'    ：ls -lt
+
+dir_array=($(ls -lt ${dbbackup_path} | grep '.[0-9]\{14\}' | awk '{print $9}'))
+
+
+}
