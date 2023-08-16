@@ -65,9 +65,41 @@ echo "== 空のDBバックアップディレクトリ削除処理"
 #DBバックアップディレクトリを取得する
 # ls -lt <パス>       ：<パス>配下のディレクトリとファイルを時刻によってソートしてリストする。
 # grep '.[0-9]\{14\}' ：YYYYMMDDHHMMSS形式(数字14桁)のディレクトリを検索する
-# awk '{print $9}'    ：ls -lt
-
+# awk '{print $9}'    ：ls -ltで出力される値の9番目の値(ファイル名)を出力する
 dir_array=($(ls -lt ${dbbackup_path} | grep '.[0-9]\{14\}' | awk '{print $9}'))
+for i in "${!dir_array[@]}"
+do
+  #空のディレクトリの場合ディレクトリを削除する
+  if [ -z "$(ls -A ${dbbackup_path}/${dbbackup_dir_array[$i]})" ]; then
+    echo "rm -rf ${dbbackup_path}/${dbbackup_dir_array[$i]}"
+    rm -rf ${dbbackup_path}/${dbbackup_dir_array[$i]}
+    if [ ${EXIT_CODE} -ne 0 ]; then
+      echo "exit_code:${EXIT_CODE} 空のDBバックアップディレクトリ削除処理エラー　エラー対象${dbbackup_path}/${dbbackup_dir_array[$i]}"
+      exit ${EXIT_CODE}
+    fi
+  fi
+done
 
+#####
+# 3世代以降のDBバックアップを削除する
+#####
+echo "== 3世代以降のDBバックアップ削除処理"
+dir_array=($(ls -lt ${dbbackup_path} | grep '.[0-9]\{14\}' | head | awk '{print $9}'))
+for i in "${!dir_array[@]}"
+do
+  #配列の2番目以降のディレクトリを削除する
+  if [ 1 -le ${i} ]; then
+    echo "rm -rf ${dbbackup_path}/${dbbackup_dir_array[$i]}"
+    rm -rf ${dbbackup_path}/${dbbackup_dir_array[$i]}
+    if [ ${EXIT_CODE} -ne 0 ]; then
+      echo "exit_code:${EXIT_CODE} 3世代以降のDBバックアップ削除処理エラー　エラー対象${dbbackup_path}/${dbbackup_dir_array[$i]}"
+      exit ${EXIT_CODE}
+    fi
+  fi
+done
+
+#####
+# 3世代以降のDBバックアップを削除する
+#####
 
 }
